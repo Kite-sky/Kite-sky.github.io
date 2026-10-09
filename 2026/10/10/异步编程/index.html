@@ -1,0 +1,547 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>异步编程 | 断了线的风筝</title><meta name="author" content="断了线的风筝"><meta name="copyright" content="断了线的风筝"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="C#并发编程写在前面工作中经常用到异步编程，经常使用到Task和Task&lt;T&gt;对象，async和await关键字来实现C#中的异步编程。在使用中碰到有一些问题比如：为啥异步无返回值的方法有时添加await Task.CompletedTask；UI中的Click事件改造成异步方法；以及Task的各种用法；感念不清楚等问题。故整理了这篇文章。 一、概念简介1.1 并发编程**并发：**同">
+<meta property="og:type" content="article">
+<meta property="og:title" content="异步编程">
+<meta property="og:url" content="http://kite-sky.github.io/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/index.html">
+<meta property="og:site_name" content="断了线的风筝">
+<meta property="og:description" content="C#并发编程写在前面工作中经常用到异步编程，经常使用到Task和Task&lt;T&gt;对象，async和await关键字来实现C#中的异步编程。在使用中碰到有一些问题比如：为啥异步无返回值的方法有时添加await Task.CompletedTask；UI中的Click事件改造成异步方法；以及Task的各种用法；感念不清楚等问题。故整理了这篇文章。 一、概念简介1.1 并发编程**并发：**同">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://kite-sky.github.io/img/butterfly-icon.png">
+<meta property="article:published_time" content="2026-10-09T16:27:00.000Z">
+<meta property="article:modified_time" content="2026-10-09T16:33:28.331Z">
+<meta property="article:author" content="断了线的风筝">
+<meta property="article:tag" content="Parallel">
+<meta property="article:tag" content="Task">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://kite-sky.github.io/img/butterfly-icon.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "异步编程",
+  "url": "http://kite-sky.github.io/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/",
+  "image": "http://kite-sky.github.io/img/butterfly-icon.png",
+  "datePublished": "2026-10-09T16:27:00.000Z",
+  "dateModified": "2026-10-09T16:33:28.331Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "断了线的风筝",
+      "url": "http://kite-sky.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/kite.ico"><link rel="canonical" href="http://kite-sky.github.io/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.1.260810"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        try {
+          const data = { value }
+
+          if (ttl != null) {
+            data.expiry = Date.now() + ttl * 86400000
+          }
+
+          localStorage.setItem(key, JSON.stringify(data))
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '异步编程',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"><link rel="alternate" href="/atom.xml" title="断了线的风筝" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/background.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">断了线的风筝</span></a><a class="nav-page-title" href="/"><span class="site-name">异步编程</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">异步编程</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-09T16:27:00.000Z" title="发表于 2026-10-10 00:27:00">2026-10-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-09T16:33:28.331Z" title="更新于 2026-10-10 00:33:28">2026-10-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/C-%E5%9F%BA%E7%A1%80/">C#基础</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="C-并发编程"><a href="#C-并发编程" class="headerlink" title="C#并发编程"></a>C#并发编程</h1><h1 id="写在前面"><a href="#写在前面" class="headerlink" title="写在前面"></a>写在前面</h1><p>工作中经常用到异步编程，经常使用到<code>Task</code>和<code>Task&lt;T&gt;</code>对象，async和await关键字来实现C#中的异步编程。在使用中碰到有一些问题比如：为啥异步无返回值的方法有时添加await Task.CompletedTask；UI中的Click事件改造成异步方法；以及Task的各种用法；感念不清楚等问题。故整理了这篇文章。</p>
+<h1 id="一、概念简介"><a href="#一、概念简介" class="headerlink" title="一、概念简介"></a>一、概念简介</h1><h2 id="1-1-并发编程"><a href="#1-1-并发编程" class="headerlink" title="1.1 并发编程"></a>1.1 并发编程</h2><p>**并发：**同时做多件事情</p>
+<p>并发编程的实现形式：</p>
+<ol>
+<li><p>**多线程：**并发的一种实现形式，采用多个线程来执行程序。</p>
+</li>
+<li><p>**异步编程：**并发的一种实现形式，它采用future模式（补充）或callback机制，以避免产生不必要的线程。</p>
+<p>一个future（或promie）类型表示一个即将完成的操作。在Net中，新future类型有Task和Task<TResut>。老版本异步API中采用回调或事件，而不是future。</p>
+<p><strong>异步编程核心理念是异步操作</strong>：启动了的操作将会在将来的某个时间点完成。这个操作执行时，不会阻塞原来的线程；启动这个操作的线程可以继续执行其他任务；当操作完成时会通知它的future或调用回调函数，以便让程序知道操作已经结束。</p>
+</li>
+<li><p>**响应式编程：**并发的一种实现形式，一种声明式的编程模式，程序在该模式中对事件做出响应。</p>
+<p>异步编程意味着程序启动一个操作，而该操作将会在一段时间后完成· 响应式编程与异步编程非常类似，不过它是基于异步事件（asynchronous event）的，而不是异步操作（asnchronous operation）。 异步事件可以没有一个实际的“开始”，可以任何时间发生，并且可以发生多次，例如用户输人。</p>
+</li>
+</ol>
+<h1 id="二、异步编程"><a href="#二、异步编程" class="headerlink" title="二、异步编程"></a>二、异步编程</h1><h2 id="2-1-异步编程的好处"><a href="#2-1-异步编程的好处" class="headerlink" title="2.1 异步编程的好处"></a>2.1 异步编程的好处</h2><p>对于GUI程序，异步编程提高了相应能力。一些耗时的操作（IO操作，数据库读写等）可以使用异步编程。</p>
+<p>对于服务器端应用：异步编程实现可扩展性。一个服务器可能同时处理多个客户端的请求。这种通信等待网络或互联网上其他计算机的相应往往消耗大量时间。</p>
+<h2 id="2-2-异步编程的实现"><a href="#2-2-异步编程的实现" class="headerlink" title="2.2 异步编程的实现"></a>2.2 异步编程的实现</h2><p>现代的异步 .NET 程序使用两个关键字：async 和await。 async 关键字加在方法声明上，它的主要目的是使方法内的 关键字生效（为了保持向后兼容，同时引人了这两个关键字）。如果 async 方法有返回值，应返回Task<T>；如果没有返回值，应返回 Task。 这些task 类型相当于 future，用来在异步方法结束时通知主程序。</p>
+<blockquote>
+<p>⚠️不要用void作为async方法的返回类型！async方法可以返回void，但是这仅限于编写事件处理程序。一个普通的 async 方法如果没有返回值，要返回Task，而不是 void。</p>
+</blockquote>
+<p>看一个异步编程的例子：</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">internal</span> <span class="keyword">class</span> <span class="title">DownloadString</span></span><br><span class="line">&#123;</span><br><span class="line">    Stopwatch sw = <span class="keyword">new</span> Stopwatch();</span><br><span class="line">    <span class="keyword">const</span> <span class="built_in">int</span> MaxCount = <span class="number">6000000</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment"><span class="doctag">///</span> <span class="doctag">&lt;summary&gt;</span></span></span><br><span class="line">    <span class="comment"><span class="doctag">///</span> 日志消息事件，用于把原本输出到调试窗口的内容转发到页面。</span></span><br><span class="line">    <span class="comment"><span class="doctag">///</span> <span class="doctag">&lt;/summary&gt;</span></span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">event</span> Action&lt;<span class="built_in">string</span>&gt;? LogMessage;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">WriteLog</span>(<span class="params"><span class="built_in">string</span> message</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        Debug.WriteLine(message);</span><br><span class="line">        LogMessage?.Invoke(message);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">DoRun</span>()</span></span><br><span class="line">    &#123;</span><br><span class="line">        sw.Start();</span><br><span class="line">        Task&lt;<span class="built_in">long</span>&gt; t1 = CountCharactersAsync(<span class="number">1</span>, <span class="string">&quot;https://www.baidu.com/&quot;</span>);</span><br><span class="line">        Task&lt;<span class="built_in">long</span>&gt; t2 = CountCharactersAsync(<span class="number">2</span>, <span class="string">&quot;https://cn.bing.com/&quot;</span>);</span><br><span class="line">        CountToALargeNumber(<span class="number">1</span>);</span><br><span class="line">        CountToALargeNumber(<span class="number">2</span>);</span><br><span class="line">        CountToALargeNumber(<span class="number">3</span>);</span><br><span class="line">        CountToALargeNumber(<span class="number">4</span>);</span><br><span class="line">        WriteLog(<span class="string">$&quot;Char in https://www.baidu.com : <span class="subst">&#123;t1.Result&#125;</span>&quot;</span>);</span><br><span class="line">        WriteLog(<span class="string">$&quot;Char in https://cn.bing.com/ : <span class="subst">&#123;t2.Result&#125;</span>&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">async</span> Task&lt;<span class="built_in">long</span>&gt; <span class="title">CountCharactersAsync</span>(<span class="params"><span class="built_in">int</span> v1, <span class="built_in">string</span> v2</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        HttpClient wc = <span class="keyword">new</span> HttpClient();</span><br><span class="line">        WriteLog(<span class="string">$&quot;Start Call <span class="subst">&#123;v1&#125;</span> : <span class="subst">&#123;sw.Elapsed.TotalMilliseconds&#125;</span>ms&quot;</span>);</span><br><span class="line">        <span class="keyword">var</span> result = <span class="keyword">await</span> wc.GetStringAsync(<span class="keyword">new</span> Uri(v2)).ConfigureAwait(<span class="literal">false</span>);</span><br><span class="line">        WriteLog(<span class="string">$&quot;Call <span class="subst">&#123;v1&#125;</span> completed: <span class="subst">&#123;sw.Elapsed.TotalMilliseconds&#125;</span>ms&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> result.Length;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">CountToALargeNumber</span>(<span class="params"><span class="built_in">int</span> v1</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="built_in">int</span> i = <span class="number">0</span>; i &lt; MaxCount; i++) ;</span><br><span class="line">        WriteLog(<span class="string">$&quot;End Counting <span class="subst">&#123;v1&#125;</span>: <span class="subst">&#123;sw.Elapsed.TotalMilliseconds&#125;</span>ms&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 调用方法</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">Test</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    DownloadString ds = <span class="keyword">new</span> DownloadString();</span><br><span class="line">    ds.LogMessage += AppendLog;</span><br><span class="line">    ds.DoRun();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">AppendLog</span>(<span class="params"><span class="built_in">string</span> message</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 异步回调可能来自线程池线程，需切回 UI 线程再更新控件</span></span><br><span class="line">    Dispatcher.BeginInvoke(<span class="keyword">new</span> Action(() =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        LogTextBox.AppendText(message + Environment.NewLine);</span><br><span class="line">        LogTextBox.ScrollToEnd();</span><br><span class="line">    &#125;));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 输出结果：</span></span><br><span class="line">Start Call <span class="number">1</span> : <span class="number">18.5392m</span>s</span><br><span class="line">Start Call <span class="number">2</span> : <span class="number">33.6974m</span>s</span><br><span class="line">End Counting <span class="number">1</span>: <span class="number">41.8304m</span>s</span><br><span class="line">End Counting <span class="number">2</span>: <span class="number">49.4526m</span>s</span><br><span class="line">End Counting <span class="number">3</span>: <span class="number">55.9736m</span>s</span><br><span class="line">End Counting <span class="number">4</span>: <span class="number">60.5558m</span>s</span><br><span class="line">Call <span class="number">1</span> completed: <span class="number">1725.414m</span>s</span><br><span class="line">Char <span class="keyword">in</span> https:<span class="comment">//www.baidu.com : 28918</span></span><br><span class="line">Call <span class="number">2</span> completed: <span class="number">1777.672m</span>s</span><br><span class="line">Char <span class="keyword">in</span> https:<span class="comment">//cn.bing.com/ : 14851</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>分析async&#x2F;await特性结构</strong></p>
+<p>该特性有3部分组成：</p>
+<ul>
+<li><p>调用方法：该方法调用异步方法，然后在异步方法执行其任务的时候继续执行（可能在相同线程上，也可能在不同线程上）。</p>
+</li>
+<li><p>异步方法：异步执行工作，然后立即返回到调用方法。</p>
+</li>
+<li><p>await表达式：用于异步方法内部，指明需异步执行的任务。</p>
+</li>
+</ul>
+<h2 id="2-3-异步方法"><a href="#2-3-异步方法" class="headerlink" title="2.3 异步方法"></a>2.3 异步方法</h2><p><strong>特征</strong></p>
+<ul>
+<li><p>有async 修饰符修饰</p>
+</li>
+<li><p>方法体包含一个或多个await 表达式</p>
+</li>
+<li><p>有以下返回类型</p>
+<ul>
+<li>void：如果调用方法仅想调用异步方法，而不需要与它做任何交互时（称“调用并忘记”），异步方法可以返回void类型。如果异步方法中包含任何return 语句，则他们不能返回任何东西。</li>
+<li>Task：如果调用方法不需要从异步方法中返回某个值，但需要检查异步方法的状态，那异步方法可以返回一个Task类型的对象。在这种情况下，如果异步方法中包含任何 return语句，则它们不能返回任何东西。</li>
+<li>Task<T>：如果调用方法要从调用中获取一个T类型的值，异步方法的返回类型就必须是Task<T>。 调用方法将通过读取 Task 的 Resu1t属性来获取这个T类型的值。</li>
+<li>ValueTask<T>：这是一个值类型对象，它与 Task<T> 类似，但用于任务结果可能已经可用的情况。因为它是一个值类型，所以它可以放在栈上，而无须像 Task<T> 对象那样在堆上分配空间。因此，它在某些情况下可以提高性能。</li>
+</ul>
+</li>
+</ul>
+<p>下图阐明了调用方法和异步方法在3种返回类型进行交互时所需的体系结构。</p>
+<p>使用返回 Task<int>对象的异步方法</p>
+<p><img src="/../img/taskint.png"></p>
+<p>使用返回 Task 对象的异步方法</p>
+<p><img src="/../img/task.png"></p>
+<p>使用“调用并忘记”的异步方法</p>
+<p><img src="/../img/void.png"></p>
+<h2 id="2-4-异步方法控制流"><a href="#2-4-异步方法控制流" class="headerlink" title="2.4 异步方法控制流"></a>2.4 异步方法控制流</h2><p>异步方法包含三个不同的区域。第一个await前；await表达式；后续部分。</p>
+<p>下图阐明了一个异步方法的控制流。它从第一个 await 表达式之前的代码开始，正常（同步地）执行直到遇见第一个 await。 这一区域实际上在第一个 await 表达式处结束，此时await的任务还没有完成（大多数情况下如此）。当 await 的任务完成时，方法将继续同步执行。如果还有其他 await，就重复上述过程。</p>
+<p><img src="/../img/%E5%BC%82%E6%AD%A5%E6%96%B9%E6%B3%95%E6%8E%A7%E5%88%B6%E6%B5%81.png"></p>
+<h2 id="2-5-异步编程中常用方法"><a href="#2-5-异步编程中常用方法" class="headerlink" title="2.5 异步编程中常用方法"></a>2.5 异步编程中常用方法</h2><h3 id="1-Task-Delay-TimeSpan"><a href="#1-Task-Delay-TimeSpan" class="headerlink" title="1. Task.Delay(TimeSpan)"></a>1. Task.Delay(TimeSpan)</h3><p><strong>作用</strong>：异步等待一段时间，<strong>不占用线程</strong>（异步 Sleep）</p>
+<ul>
+<li>返回<code>Task</code>，可以<code>await</code></li>
+<li>适合：请求超时控制、重试间隔</li>
+<li>特点：等待期间线程释放；支持传入<code>CancellationToken</code>提前取消延时</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">await Task.Delay(3000); // 等待3秒，非阻塞</span><br></pre></td></tr></table></figure>
+
+<p>⚠️ 坑：不是 Thread.Sleep；<code>Task.Delay</code>不会卡死线程。</p>
+<h3 id="2-Task-FromResult-T-result"><a href="#2-Task-FromResult-T-result" class="headerlink" title="2. Task.FromResult(T result)"></a>2. Task.FromResult<T>(T result)</h3><p><strong>作用</strong>：快速创建<strong>已经完成</strong>的成功 Task，包装一个现成返回值</p>
+<ul>
+<li>没有任何异步操作，直接返回已完成任务</li>
+<li>使用场景：异步接口实现，<strong>不需要真正 IO，直接返回本地缓存结果</strong>，不用额外 await</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">public async Task&lt;string&gt; GetCacheAsync()</span><br><span class="line">&#123;</span><br><span class="line">    return Task.FromResult(&quot;缓存文本&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>⚠️ 坑：只造成功任务；对应还有<code>Task.FromException</code>（已失败任务）、<code>Task.FromCanceled</code>（已取消任务）。</p>
+<h3 id="3-IProgress-（进度上报，不是-Task-静态方法，配套异步）"><a href="#3-IProgress-（进度上报，不是-Task-静态方法，配套异步）" class="headerlink" title="3. IProgress （进度上报，不是 Task 静态方法，配套异步）"></a>3. IProgress<T> （进度上报，不是 Task 静态方法，配套异步）</h3><p><strong>作用</strong>：异步任务向外报告执行进度，<strong>自动切回原始同步上下文（WPF 自动回到 UI 线程）</strong></p>
+<ul>
+<li>适合：文件下载、批量报文处理，实时更新 UI 进度条</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">var progress = new Progress&lt;int&gt;(p=&gt; WriteLog($&quot;进度：&#123;p&#125;%&quot;));</span><br><span class="line">await DoWorkAsync(progress);</span><br></pre></td></tr></table></figure>
+
+<p>⚠️ 重点：<code>Progress&lt;T&gt;</code>在构造时捕获同步上下文；<strong>不要在 ConfigureAwait (false) 内部新建 Progress</strong>。</p>
+<h3 id="4-Task-WhenAll-Task-tasks-✅高频"><a href="#4-Task-WhenAll-Task-tasks-✅高频" class="headerlink" title="4. Task.WhenAll (Task [] tasks) ✅高频"></a>4. Task.WhenAll (Task [] tasks) ✅高频</h3><p><strong>作用</strong>：异步等待<strong>所有任务全部完成</strong>，全部跑完才继续</p>
+<ul>
+<li>返回<code>Task&lt;TResult[]&gt;</code>；成功时收集所有返回值；<strong>任意任务异常，整体抛出 AggregateException</strong></li>
+<li>适用：批量 HTTP、多路 CAN 采集，全部任务都要执行完</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var allResult = await Task.WhenAll(t1, t2, t3);</span><br></pre></td></tr></table></figure>
+
+<p>⚠️坑：一个抛异常，await 立刻抛出；<strong>剩余任务还会继续后台执行，不会自动取消</strong>。</p>
+<h3 id="5-Task-WhenAny-Task-tasks"><a href="#5-Task-WhenAny-Task-tasks" class="headerlink" title="5. Task.WhenAny(Task[] tasks)"></a>5. Task.WhenAny(Task[] tasks)</h3><p>✅<strong>作用</strong>：异步等待<strong>任意一个任务最先完成</strong>（成功 &#x2F; 异常 &#x2F; 取消都算完成）</p>
+<ul>
+<li>返回最先完成的 Task；剩下任务<strong>继续后台跑，不会停止</strong></li>
+<li>适用：冗余请求、超时控制（搭配 Task.Delay）</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var finishedTask = await Task.WhenAny(httpTask, Task.Delay(5000));</span><br></pre></td></tr></table></figure>
+
+<p>⚠️坑：只会拿到第一个完成任务，其他任务仍在后台运行，需要手动 CancellationToken 取消。</p>
+<h3 id="6-ConfigureAwait-bool"><a href="#6-ConfigureAwait-bool" class="headerlink" title="6. ConfigureAwait (bool)"></a>6. ConfigureAwait (bool)</h3><p>不是创建 Task 方法，<strong>await 的链式调用配置</strong></p>
+<ul>
+<li><code>ConfigureAwait(true)</code>【默认】：await 恢复后，切回原来的同步上下文（WPF 回到 UI 线程，可以直接操作 UI）</li>
+<li><code>ConfigureAwait(false)</code>：await 恢复后，<strong>不切回原上下文</strong>，使用线程池线程，减少死锁、性能更好</li>
+</ul>
+<blockquote>
+<p>规则：IO 底层逻辑，后面代码不操作 UI → <code>.ConfigureAwait(false)</code>坑：如果后面要写 WPF 界面，不能 false，否则跨线程报错。</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var res = await _httpClient.GetStringAsync(url).ConfigureAwait(false);</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-Task-Wait"><a href="#7-Task-Wait" class="headerlink" title="7. Task.Wait()"></a>7. Task.Wait()</h3><p><strong>作用</strong>：同步阻塞，<strong>等待单个 Task 完成</strong>，卡住当前线程直到任务结束</p>
+<ul>
+<li>有重载支持超时；异常会包装成<code>AggregateException</code></li>
+<li>风险：UI 线程调用极易死锁（你前面调试遇到的 Result 死锁同源）</li>
+</ul>
+<blockquote>
+<p>替代：<code>await task</code></p>
+</blockquote>
+<h3 id="8-Task-WaitAll-Task-tasks"><a href="#8-Task-WaitAll-Task-tasks" class="headerlink" title="8. Task.WaitAll(Task[] tasks)"></a>8. Task.WaitAll(Task[] tasks)</h3><p><strong>作用</strong>：同步阻塞，等待<strong>所有任务完成</strong>，当前线程卡死</p>
+<blockquote>
+<p>替代：<code>await Task.WhenAll()</code></p>
+</blockquote>
+<h3 id="9-Task-WaitAny-Task-tasks"><a href="#9-Task-WaitAny-Task-tasks" class="headerlink" title="9. Task.WaitAny(Task[] tasks)"></a>9. Task.WaitAny(Task[] tasks)</h3><p><strong>作用</strong>：同步阻塞，等待<strong>任意一个任务完成</strong>，当前线程卡死</p>
+<blockquote>
+<p>替代：<code>await Task.WhenAny()</code></p>
+</blockquote>
+<h2 id="2-9-取消异步编程"><a href="#2-9-取消异步编程" class="headerlink" title="2.9 取消异步编程"></a>2.9 取消异步编程</h2><p>一些.NET 异步方法允许你请求终止执行。你也可以在自己的异步方法中加人这个特性。System.Threading.Tasks 命名空间中有两个类是为此目 的而设计的：CancellationToken 和CancellationTokenSource。</p>
+<ul>
+<li>cancellationToken 对象包含一个任务是否应被取消的信息。</li>
+<li>拥有 cancellationToken 对象的任务需要定期检查其令牌（token）状态。如果 CancellationToken对象的 lscancellationRequested 属性为 true，任务需停止其操作并返回。</li>
+<li>CancellationToken 是不可逆的，并且只能使用一次。也就是说，一旦IsCancellationRequested属性被设置为 true，就不能更改了。</li>
+<li>cancellationTokenSource 对象创建可分配给不同任务的 cancellationToken 对象。任何持有 CancellationTokenSource 的对象都可以调用其 Cancel 方法，这会将 CancellationToken的 IsCanceIIationRequested 属性设置为 true。</li>
+</ul>
+<p>下面的代码展示了如何使用 CancellationTokensource 和 CancellationToken 来实现取消操作。<br>⚠️注意，该过程是协同的，即调用 CancellationTokenSource 的 Cancel 时，它本身并不会执行取消操作，而是会将 CanceIIationToken 的 IsCanceIIationRequested 属性设置为true。包含 CanceIIationToken的代码负责检查该属性，并判断是否需要停止执行并返回。</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">internal</span> <span class="keyword">class</span> <span class="title">MyClass</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">event</span> Action&lt;<span class="built_in">string</span>&gt;? LogMessage;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">WriteLog</span>(<span class="params"><span class="built_in">string</span> message</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        Debug.WriteLine(message);</span><br><span class="line">        LogMessage?.Invoke(message);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">async</span> Task <span class="title">RunAsync</span>(<span class="params">CancellationToken ct</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (ct.IsCancellationRequested) <span class="keyword">return</span>;</span><br><span class="line">        <span class="keyword">await</span> Task.Run(()=&gt;CycleMethod(ct),ct).ConfigureAwait(<span class="literal">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">CycleMethod</span>(<span class="params">CancellationToken ct</span>)</span></span><br><span class="line">    &#123;</span><br><span class="line">        WriteLog(<span class="string">&quot;Cycle method executed.&quot;</span>);</span><br><span class="line">        <span class="keyword">const</span> <span class="built_in">int</span> MaxCount = <span class="number">5</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="built_in">int</span> i = <span class="number">0</span>; i &lt; MaxCount; i++)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">if</span> (ct.IsCancellationRequested)</span><br><span class="line">            &#123;</span><br><span class="line">                WriteLog(<span class="string">&quot;Cycle method cancelled.&quot;</span>);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            Thread.Sleep(<span class="number">1000</span>);</span><br><span class="line">            WriteLog(<span class="string">$&quot;Cycle method iteration <span class="subst">&#123;i + <span class="number">1</span>&#125;</span> completed.&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 调用方法</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">Test</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    CancellationTokenSource cts = <span class="keyword">new</span> CancellationTokenSource();</span><br><span class="line">    CancellationToken token = cts.Token;</span><br><span class="line">    MyClass mc = <span class="keyword">new</span> MyClass();</span><br><span class="line">    mc.LogMessage += AppendLog;</span><br><span class="line">    Task t = mc.RunAsync(token);</span><br><span class="line">    <span class="keyword">await</span> Task.Delay(<span class="number">3000</span>);   <span class="comment">// 不阻塞 UI 线程，日志队列能实时按序处理</span></span><br><span class="line">    cts.Cancel();</span><br><span class="line">    t.Wait();</span><br><span class="line">     <span class="comment">// 走同一条 AppendLog（BeginInvoke 排队）路径，保证排在所有日志之后显示</span></span><br><span class="line">	AppendLog(<span class="string">$&quot;Was Cancelled <span class="subst">&#123;token.IsCancellationRequested&#125;</span>&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">AppendLog</span>(<span class="params"><span class="built_in">string</span> message</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 异步回调可能来自线程池线程，需切回 UI 线程再更新控件</span></span><br><span class="line">    Dispatcher.BeginInvoke(<span class="keyword">new</span> Action(() =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        LogTextBox.AppendText(message + Environment.NewLine);</span><br><span class="line">        LogTextBox.ScrollToEnd();</span><br><span class="line">    &#125;));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 输出结果</span></span><br><span class="line">Was Cancelled True</span><br><span class="line">Cycle method executed.</span><br><span class="line">Cycle method iteration <span class="number">1</span> completed.</span><br><span class="line">Cycle method iteration <span class="number">2</span> completed.</span><br><span class="line">Cycle method iteration <span class="number">3</span> completed.</span><br><span class="line">Cycle method cancelled.</span><br></pre></td></tr></table></figure>
+
+<h1 id="三、并行开发"><a href="#三、并行开发" class="headerlink" title="三、并行开发"></a>三、并行开发</h1><h2 id="3-1-并行开发简介"><a href="#3-1-并行开发简介" class="headerlink" title="3.1 并行开发简介"></a>3.1 并行开发简介</h2><p>现在电脑具有多个CPU核心，使多个线程同时执行。 若要利用硬件，可以将代码并行化，以跨多个处理器分配工作。</p>
+<p>下图简要概述了 .NET 中的并行编程体系结构。</p>
+<p><img src="/../img/%E5%B9%B6%E8%A1%8C.png"></p>
+<table>
+<thead>
+<tr>
+<th>类</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Task</code></td>
+<td>无返回值任务</td>
+</tr>
+<tr>
+<td><code>Task&lt;TResult&gt;</code></td>
+<td>带返回值任务</td>
+</tr>
+<tr>
+<td><code>Parallel</code></td>
+<td>高层并行 API：<code>For/ForEach/Invoke</code></td>
+</tr>
+<tr>
+<td><code>ParallelOptions</code></td>
+<td>并行配置：最大并发、取消令牌、任务调度器</td>
+</tr>
+<tr>
+<td><code>ParallelLoopState</code></td>
+<td>并行循环内控制：<code>Break()</code> &#x2F; <code>Stop()</code></td>
+</tr>
+<tr>
+<td><code>ParallelLoopResult</code></td>
+<td>并行循环执行结果</td>
+</tr>
+<tr>
+<td><code>CancellationTokenSource</code> &#x2F; <code>CancellationToken</code></td>
+<td>取消任务</td>
+</tr>
+<tr>
+<td><code>AggregateException</code></td>
+<td>并行 &#x2F; 多任务聚合异常，包含多个内部异常</td>
+</tr>
+<tr>
+<td><code>TaskScheduler</code></td>
+<td>任务调度器，控制任务跑在哪类线程（线程池 &#x2F; UI 线程）</td>
+</tr>
+<tr>
+<td><code>TaskFactory</code></td>
+<td>任务工厂，批量创建 Task</td>
+</tr>
+</tbody></table>
+<h2 id="3-2-任务并行库（Task-Parallel-Library）"><a href="#3-2-任务并行库（Task-Parallel-Library）" class="headerlink" title="3.2 任务并行库（Task Parallel Library）"></a>3.2 任务并行库（Task Parallel Library）</h2><p>TPL 是 .NET 内置的<strong>任务并行库</strong>，命名空间：<code>System.Threading.Tasks</code>，从 .NET Framework 4.0 引入，是现代 C# 异步、并行编程的核心。</p>
+<p>TPL 核心：<code>Task</code>、<code>Task&lt;TResult&gt;</code>、<code>Parallel</code>、<code>TaskScheduler</code>，自动管理线程池，不用手动操作 Thread。</p>
+<blockquote>
+<p>⚠️ 重点区分：</p>
+<ul>
+<li><strong>并行 Parallel</strong>：多核 CPU 同时执行，适合 CPU 密集型；不是异步！会阻塞调用线程。</li>
+<li><strong>异步 async&#x2F;await</strong>：IO 密集型，不阻塞线程。</li>
+</ul>
+</blockquote>
+<p><strong>两大分支：</strong></p>
+<ul>
+<li><p>数据并行（Parallel）：同一操作对多个数据并行执行（CPU 密集循环）</p>
+</li>
+<li><p>任务并行（Task）：多个独立任务并发执行，支持异步等待（最常用）</p>
+</li>
+</ul>
+<h2 id="3-3-数据并行库"><a href="#3-3-数据并行库" class="headerlink" title="3.3 数据并行库"></a>3.3 数据并行库</h2><p>数据并行：是指对源集合或数组中的元素同时执行相同作（即并行执行）的方案。</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Parallel.For</code></td>
+<td>并行 for 循环（数字索引）</td>
+</tr>
+<tr>
+<td><code>Parallel.ForEach</code></td>
+<td>并行遍历集合（IEnumerable）</td>
+</tr>
+<tr>
+<td><code>Parallel.Invoke</code></td>
+<td>并行执行一组独立 Action</td>
+</tr>
+<tr>
+<td><code>ParallelLoopState</code></td>
+<td>循环状态：提前停止、跳出循环</td>
+</tr>
+<tr>
+<td><code>ParallelOptions</code></td>
+<td>配置：最大并发数、取消令牌、任务调度器</td>
+</tr>
+<tr>
+<td><code>ParallelLoopResult</code></td>
+<td>返回循环执行结果：是否完成、是否被中断</td>
+</tr>
+</tbody></table>
+<h3 id="3-3-1-Parallel-For-并行数字循环"><a href="#3-3-1-Parallel-For-并行数字循环" class="headerlink" title="3.3.1 Parallel.For 并行数字循环"></a>3.3.1 Parallel.For 并行数字循环</h3><p>签名：<code>ParallelLoopResult Parallel.For(int fromInclusive, int toExclusive, Action&lt;int&gt; body)</code></p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelForDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// 并行 0 ~ 9</span></span><br><span class="line">    Parallel.For(<span class="number">0</span>, <span class="number">10</span>, i =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;索引<span class="subst">&#123;i&#125;</span>, 任务ID:<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line">        <span class="comment">// 模拟CPU计算</span></span><br><span class="line">        <span class="built_in">double</span> sum = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="built_in">int</span> j = <span class="number">0</span>; j &lt; <span class="number">100000</span>; j++) sum += j;</span><br><span class="line">    &#125;);</span><br><span class="line">    Console.WriteLine(<span class="string">&quot;Parallel.For 执行结束&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>带 ParallelLoopState：Break &#x2F; Stop</strong></p>
+<ul>
+<li><code>Break()</code>：尽快停止<strong>后续索引</strong>，已经启动的循环继续跑完（优先，类似 for break）</li>
+<li><code>Stop()</code>：立刻尽可能停止所有循环，不管索引</li>
+</ul>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelForBreakDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    Parallel.For(<span class="number">0</span>, <span class="number">20</span>, (i, state) =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (i == <span class="number">10</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            Console.WriteLine(<span class="string">$&quot;i=<span class="subst">&#123;i&#125;</span> 调用Break&quot;</span>);</span><br><span class="line">            state.Break();</span><br><span class="line">        &#125;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;i=<span class="subst">&#123;i&#125;</span>&quot;</span>);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>带本地状态重载（高性能，减少锁竞争）</strong></p>
+<p>适合累加计算，每个线程有独立本地变量，最后合并结果</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelForLocalStateDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="built_in">long</span> totalSum = <span class="number">0</span>;</span><br><span class="line">    Parallel.For(<span class="number">0</span>, <span class="number">1000</span>,</span><br><span class="line">        <span class="comment">// localInit：每个线程初始化本地变量</span></span><br><span class="line">        () =&gt; <span class="number">0L</span>,</span><br><span class="line">        (i, state, localSum) =&gt;</span><br><span class="line">        &#123;</span><br><span class="line">            localSum += i;</span><br><span class="line">            <span class="keyword">return</span> localSum;</span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="comment">// localFinally：每个线程结束，合并到全局</span></span><br><span class="line">        localSum =&gt;</span><br><span class="line">        &#123;</span><br><span class="line">            Interlocked.Add(<span class="keyword">ref</span> totalSum, localSum);</span><br><span class="line">        &#125;);</span><br><span class="line">    Console.WriteLine(<span class="string">$&quot;总和：<span class="subst">&#123;totalSum&#125;</span>&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-2-Parallel-ForEach-并行便利集合"><a href="#3-3-2-Parallel-ForEach-并行便利集合" class="headerlink" title="3.3.2 Parallel.ForEach 并行便利集合"></a>3.3.2 Parallel.ForEach 并行便利集合</h3><p>最常用，遍历数组、List、IEnumerable。</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelForEachDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">var</span> list = <span class="keyword">new</span>[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span> &#125;;</span><br><span class="line"></span><br><span class="line">    Parallel.ForEach(list, item =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;当前元素 <span class="subst">&#123;item&#125;</span>, TaskId:<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>带分区器 + ParallelLoopState</strong></p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelForEachBreakDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">var</span> nums = <span class="keyword">new</span>[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span> &#125;;</span><br><span class="line">    Parallel.ForEach(nums, (num, state) =&gt;</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (num == <span class="number">5</span>)</span><br><span class="line">        &#123;</span><br><span class="line">            Console.WriteLine(<span class="string">&quot;找到5，停止循环&quot;</span>);</span><br><span class="line">            state.Stop();</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Console.WriteLine(num);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>带本地状态重载（同 For，适合并行聚合）</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">static void ParallelForEachLocalDemo()</span><br><span class="line">&#123;</span><br><span class="line">    var data = Enumerable.Range(1, 1000).ToArray();</span><br><span class="line">    long total = 0;</span><br><span class="line"></span><br><span class="line">    Parallel.ForEach(data,</span><br><span class="line">        () =&gt; 0L,</span><br><span class="line">        (num, state, local) =&gt;</span><br><span class="line">        &#123;</span><br><span class="line">            local += num;</span><br><span class="line">            return local;</span><br><span class="line">        &#125;,</span><br><span class="line">        local =&gt; Interlocked.Add(ref total, local));</span><br><span class="line"></span><br><span class="line">    Console.WriteLine(total);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-3-Parallel-Invoke-并行执行多个方法"><a href="#3-3-3-Parallel-Invoke-并行执行多个方法" class="headerlink" title="3.3.3 Parallel.Invoke 并行执行多个方法"></a>3.3.3 Parallel.Invoke 并行执行多个方法</h3><p>一次性并行执行多个无返回 Action。</p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title">Program</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Main</span>()</span></span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;主线程开始：<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line"></span><br><span class="line">        Parallel.Invoke(</span><br><span class="line">            Action1,</span><br><span class="line">            Action2,</span><br><span class="line">            () =&gt;</span><br><span class="line">            &#123;</span><br><span class="line">                Console.WriteLine(<span class="string">$&quot;匿名方法，线程ID：<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">        Console.WriteLine(<span class="string">&quot;全部任务执行完毕&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Action1</span>()</span></span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;Action1 线程ID：<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">Action2</span>()</span></span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">$&quot;Action2 线程ID：<span class="subst">&#123;Task.CurrentId&#125;</span>&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>特点：</p>
+<ol>
+<li>所有 Action 尽可能并行；<strong>阻塞主线程直到全部完成</strong></li>
+<li>任意 Action 抛异常，会聚合到<code>AggregateException</code></li>
+</ol>
+</blockquote>
+<h3 id="3-3-4-ParallelOptions-配置项"><a href="#3-3-4-ParallelOptions-配置项" class="headerlink" title="3.3.4 ParallelOptions 配置项"></a>3.3.4 ParallelOptions 配置项</h3><figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelOptionsDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">var</span> cts = <span class="keyword">new</span> CancellationTokenSource();</span><br><span class="line">    <span class="keyword">var</span> options = <span class="keyword">new</span> ParallelOptions</span><br><span class="line">    &#123;</span><br><span class="line">        MaxDegreeOfParallelism = <span class="number">4</span>, <span class="comment">// 最大并发任务数，限制线程数量</span></span><br><span class="line">        CancellationToken = cts.Token,</span><br><span class="line">        <span class="comment">// TaskScheduler = TaskScheduler.Default</span></span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span></span><br><span class="line">    &#123;</span><br><span class="line">        Parallel.For(<span class="number">0</span>, <span class="number">10</span>, options, i =&gt;</span><br><span class="line">        &#123;</span><br><span class="line">            Console.WriteLine(<span class="string">$&quot;i=<span class="subst">&#123;i&#125;</span>&quot;</span>);</span><br><span class="line">            <span class="comment">// cts.Token.ThrowIfCancellationRequested();</span></span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (OperationCanceledException)</span><br><span class="line">    &#123;</span><br><span class="line">        Console.WriteLine(<span class="string">&quot;任务被取消&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>MaxDegreeOfParallelism</code></p>
+<ul>
+<li>默认：-1，由线程池自动调度</li>
+<li>场景：访问有限资源（数据库连接、硬件端口），限制并发，防止打爆资源</li>
+</ul>
+</blockquote>
+<h3 id="3-3-5-ParallelLoopResult-返回值"><a href="#3-3-5-ParallelLoopResult-返回值" class="headerlink" title="3.3.5 ParallelLoopResult 返回值"></a>3.3.5 ParallelLoopResult 返回值</h3><figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">ParallelLoopResult result = Parallel.For(<span class="number">0</span>, <span class="number">10</span>, (i, state) =&gt;</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span>(i == <span class="number">3</span>) state.Break();</span><br><span class="line">&#125;);</span><br><span class="line">Console.WriteLine(<span class="string">$&quot;是否完成: <span class="subst">&#123;result.IsCompleted&#125;</span>&quot;</span>);</span><br><span class="line">Console.WriteLine(<span class="string">$&quot;最低索引: <span class="subst">&#123;result.LowestBreakIteration&#125;</span>&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>IsCompleted</code>：true &#x3D; 循环全部跑完，没有 Break&#x2F;Stop</li>
+<li><code>LowestBreakIteration</code>：调用 Break 的最小索引；Stop 时为 null</li>
+</ul>
+<h3 id="3-3-7-AggregateException-异常处理"><a href="#3-3-7-AggregateException-异常处理" class="headerlink" title="3.3.7 AggregateException 异常处理"></a>3.3.7 AggregateException 异常处理</h3><p>并行中多个任务可以同时抛出异常，会打包进 <code>AggregateException</code></p>
+<figure class="highlight c#"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">ParallelExceptionDemo</span>()</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">try</span></span><br><span class="line">    &#123;</span><br><span class="line">        Parallel.Invoke(</span><br><span class="line">            () =&gt; <span class="keyword">throw</span> <span class="keyword">new</span> ArgumentException(<span class="string">&quot;参数错误A&quot;</span>),</span><br><span class="line">            () =&gt; <span class="keyword">throw</span> <span class="keyword">new</span> InvalidOperationException(<span class="string">&quot;状态错误B&quot;</span>)</span><br><span class="line">        );</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (AggregateException ex)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">foreach</span> (<span class="keyword">var</span> inner <span class="keyword">in</span> ex.InnerExceptions)</span><br><span class="line">        &#123;</span><br><span class="line">            Console.WriteLine(<span class="string">$&quot;内部异常：<span class="subst">&#123;inner.Message&#125;</span>&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 过滤处理指定类型异常</span></span><br><span class="line">        ex.Handle(e =&gt;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">if</span> (e <span class="keyword">is</span> ArgumentException) <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-8-Parallel的使用场景分析"><a href="#3-3-8-Parallel的使用场景分析" class="headerlink" title="3.3.8 Parallel的使用场景分析"></a>3.3.8 Parallel的使用场景分析</h3><p><strong>适用场景</strong></p>
+<ol>
+<li>CPU 密集计算：图像处理、批量数据运算、文件解析（计算量大）</li>
+<li>大量独立任务，任务之间无强依赖</li>
+<li>需要简单并行，不想手动管理 Task&#x2F;Thread</li>
+</ol>
+<p>❌ <strong>不适合场景</strong></p>
+<ol>
+<li>IO 密集：网络请求、数据库查询（线程会阻塞浪费资源，优先<code>Task.WhenAll</code>）</li>
+<li>任务极短：循环体逻辑很小，并行开销 &gt; 收益（并行有线程调度成本）</li>
+<li>共享变量不加锁：多个线程同时写同一个变量，会出现竞态条件</li>
+</ol>
+<blockquote>
+<p>推荐：优先使用<strong>本地状态重载</strong>，减少锁；必要用 <code>Interlocked</code> &#x2F; <code>lock</code></p>
+</blockquote>
+<h3 id="3-3-9-Parallel和Task-All对比"><a href="#3-3-9-Parallel和Task-All对比" class="headerlink" title="3.3.9 Parallel和Task.All对比"></a>3.3.9 Parallel和Task.All对比</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>Parallel</th>
+<th>Task.WhenAll</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>阻塞</td>
+<td>阻塞调用线程</td>
+<td>不阻塞（await）</td>
+</tr>
+<tr>
+<td>适用</td>
+<td>CPU 密集</td>
+<td>IO 密集</td>
+</tr>
+<tr>
+<td>返回</td>
+<td>void &#x2F; ParallelLoopResult</td>
+<td>Task</td>
+</tr>
+<tr>
+<td>控制</td>
+<td>MaxDegreeOfParallelism</td>
+<td>手动控制并发</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>参考链接</p>
+<p>《C#并发编程经典实例》</p>
+<p>《C#图解教程》</p>
+<p><a target="_blank" rel="noopener" href="https://learn.microsoft.com/zh-cn/dotnet/standard/parallel-programming/">.NET 中的并行编程：文档指南 - .NET | Microsoft Learn</a></p>
+<p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/1989604740963796187">(84 封私信 &#x2F; 62 条消息) 深入理解 C#.NET Parallel：并行编程的正确打开方式 - 知乎</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/heweijian/p/15418959.html">C#并行编程之Parallel的使用 - &lt;渔人&gt; - 博客园</a></p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://kite-sky.github.io">断了线的风筝</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://kite-sky.github.io/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/">http://kite-sky.github.io/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://kite-sky.github.io" target="_blank">断了线的风筝</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Task/">Task</a><a class="post-meta__tags" href="/tags/Parallel/">Parallel</a></div><div class="post-share"><div class="social-share" data-image="/img/butterfly-icon.png" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/01/TCP%E5%92%8CUDP%E5%8D%8F%E8%AE%AE/" title="TCP和UDP协议"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">TCP和UDP协议</div></div><div class="info-2"><div class="info-item-1">TCP和UDP协议[TOC] 一、TCP定义维基百科： 传输控制协议（英语：Transmission Control Protocol，缩写：TCP）是一种面向连接的、可靠的、基于字节流的传输层通信协议。 关键字：面向连接，可靠，字节流。  面向连接：客户端、服务端交换数据前，需要建立连接； 可靠：通过特定机制，在不可靠的网络之上，确保报文准确送达， 字节流：数据的最小单位为字节。至于字节中存储内容的含义，由于应用层的程序决定。  二、TCP如何确保服务可靠性TCP花了大量的功夫在确保传输层服务的可靠性上，具体举措包括（但不限于）以下：  应用数据切割：应用数据被分隔成TCP认为最适合发送的多个报文段（由特定的算法和机制来确认） 接收端确认：接收端收到报文段后，会向发送端发送确认报文； 超时重传机制：发送端发送一个报文段后，会启动定时器，等待接收端确认收到这个报文；如果没有及时收到确认，发送端会重新发送报文； 数据校验和：发送端发送的报文首部中，有个叫做校验和(checksum)的特殊字段，它是根据报文的首部、数据计算出来的。这是一个端到端的校验和，用来检测传输过程数据的变化。接...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/butterfly-icon.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">断了线的风筝</div><div class="author-info-description">做一只断了线的风筝，不问归处，只渡人间烟火与风月。</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#C-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="toc-text">C#并发编程</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%86%99%E5%9C%A8%E5%89%8D%E9%9D%A2"><span class="toc-text">写在前面</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E6%A6%82%E5%BF%B5%E7%AE%80%E4%BB%8B"><span class="toc-text">一、概念简介</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B"><span class="toc-text">1.1 并发编程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B"><span class="toc-text">二、异步编程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E7%9A%84%E5%A5%BD%E5%A4%84"><span class="toc-text">2.1 异步编程的好处</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-text">2.2 异步编程的实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E5%BC%82%E6%AD%A5%E6%96%B9%E6%B3%95"><span class="toc-text">2.3 异步方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-%E5%BC%82%E6%AD%A5%E6%96%B9%E6%B3%95%E6%8E%A7%E5%88%B6%E6%B5%81"><span class="toc-text">2.4 异步方法控制流</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E4%B8%AD%E5%B8%B8%E7%94%A8%E6%96%B9%E6%B3%95"><span class="toc-text">2.5 异步编程中常用方法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Task-Delay-TimeSpan"><span class="toc-text">1. Task.Delay(TimeSpan)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-Task-FromResult-T-result"><span class="toc-text">2. Task.FromResult(T result)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-IProgress-%EF%BC%88%E8%BF%9B%E5%BA%A6%E4%B8%8A%E6%8A%A5%EF%BC%8C%E4%B8%8D%E6%98%AF-Task-%E9%9D%99%E6%80%81%E6%96%B9%E6%B3%95%EF%BC%8C%E9%85%8D%E5%A5%97%E5%BC%82%E6%AD%A5%EF%BC%89"><span class="toc-text">3. IProgress （进度上报，不是 Task 静态方法，配套异步）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-Task-WhenAll-Task-tasks-%E2%9C%85%E9%AB%98%E9%A2%91"><span class="toc-text">4. Task.WhenAll (Task [] tasks) ✅高频</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-Task-WhenAny-Task-tasks"><span class="toc-text">5. Task.WhenAny(Task[] tasks)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-ConfigureAwait-bool"><span class="toc-text">6. ConfigureAwait (bool)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-Task-Wait"><span class="toc-text">7. Task.Wait()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-Task-WaitAll-Task-tasks"><span class="toc-text">8. Task.WaitAll(Task[] tasks)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-Task-WaitAny-Task-tasks"><span class="toc-text">9. Task.WaitAny(Task[] tasks)</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-9-%E5%8F%96%E6%B6%88%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B"><span class="toc-text">2.9 取消异步编程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91"><span class="toc-text">三、并行开发</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E5%B9%B6%E8%A1%8C%E5%BC%80%E5%8F%91%E7%AE%80%E4%BB%8B"><span class="toc-text">3.1 并行开发简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E4%BB%BB%E5%8A%A1%E5%B9%B6%E8%A1%8C%E5%BA%93%EF%BC%88Task-Parallel-Library%EF%BC%89"><span class="toc-text">3.2 任务并行库（Task Parallel Library）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-%E6%95%B0%E6%8D%AE%E5%B9%B6%E8%A1%8C%E5%BA%93"><span class="toc-text">3.3 数据并行库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-1-Parallel-For-%E5%B9%B6%E8%A1%8C%E6%95%B0%E5%AD%97%E5%BE%AA%E7%8E%AF"><span class="toc-text">3.3.1 Parallel.For 并行数字循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-2-Parallel-ForEach-%E5%B9%B6%E8%A1%8C%E4%BE%BF%E5%88%A9%E9%9B%86%E5%90%88"><span class="toc-text">3.3.2 Parallel.ForEach 并行便利集合</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-3-Parallel-Invoke-%E5%B9%B6%E8%A1%8C%E6%89%A7%E8%A1%8C%E5%A4%9A%E4%B8%AA%E6%96%B9%E6%B3%95"><span class="toc-text">3.3.3 Parallel.Invoke 并行执行多个方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-4-ParallelOptions-%E9%85%8D%E7%BD%AE%E9%A1%B9"><span class="toc-text">3.3.4 ParallelOptions 配置项</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-5-ParallelLoopResult-%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="toc-text">3.3.5 ParallelLoopResult 返回值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-7-AggregateException-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="toc-text">3.3.7 AggregateException 异常处理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-8-Parallel%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E5%88%86%E6%9E%90"><span class="toc-text">3.3.8 Parallel的使用场景分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-9-Parallel%E5%92%8CTask-All%E5%AF%B9%E6%AF%94"><span class="toc-text">3.3.9 Parallel和Task.All对比</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/10/%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B/" title="异步编程">异步编程</a><time datetime="2026-10-09T16:27:00.000Z" title="发表于 2026-10-10 00:27:00">2026-10-10</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/01/TCP%E5%92%8CUDP%E5%8D%8F%E8%AE%AE/" title="TCP和UDP协议">TCP和UDP协议</a><time datetime="2026-10-01T10:47:51.000Z" title="发表于 2026-10-01 18:47:51">2026-10-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/01/OSI%E5%8F%82%E8%80%83%E6%A8%A1%E5%9E%8B/" title="OSI参考模型">OSI参考模型</a><time datetime="2026-10-01T10:47:39.000Z" title="发表于 2026-10-01 18:47:39">2026-10-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/01/Socket%E7%BC%96%E7%A8%8B/" title="Socket编程">Socket编程</a><time datetime="2026-10-01T10:31:33.000Z" title="发表于 2026-10-01 18:31:33">2026-10-01</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/28/%E4%B8%B2%E5%8F%A3%E9%80%9A%E4%BF%A1/" title="串口通信">串口通信</a><time datetime="2026-08-28T14:20:23.000Z" title="发表于 2026-08-28 22:20:23">2026-08-28</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/background.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By 断了线的风筝</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.1.260810</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.1.260810"></script><script src="/js/main.js?v=5.7.1.260810"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
