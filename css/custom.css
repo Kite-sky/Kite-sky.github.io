@@ -1,0 +1,70 @@
+/* ========================================
+   博客自定义美化样式
+   通过 _config.butterfly.yml 的 inject 注入
+   不修改主题源码，可随时删除
+   ======================================== */
+
+/* ===== 1. 全局背景：柔和渐变，告别纯白 ===== */
+body {
+  background: linear-gradient(135deg, #f6f8fb 0%, #e9eef5 50%, #f0f4f8 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+/* 暗色模式背景 */
+[data-theme="dark"] body {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f1e 100%);
+  background-attachment: fixed;
+}
+
+/* ===== 2. 文章卡片悬浮动效 ===== */
+.recent-post-item {
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+}
+.recent-post-item:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 28px rgba(73, 177, 245, 0.18), 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* ===== 3. 侧边栏卡片悬浮反馈 ===== */
+#aside-content .card-widget {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+#aside-content .card-widget:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== 4. 头像美化：渐变光环边框 ===== */
+#aside-content .card-info .avatar-img {
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 3px rgba(73, 177, 245, 0.35), 0 6px 16px rgba(73, 177, 245, 0.3);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+#aside-content .card-info .avatar-img:hover {
+  box-shadow: 0 0 0 3px rgba(73, 177, 245, 0.6), 0 8px 22px rgba(73, 177, 245, 0.45);
+}
+[data-theme="dark"] #aside-content .card-info .avatar-img {
+  border-color: #1f1f1f;
+}
+
+/* ===== 5. 滚动条美化 ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(73, 177, 245, 0.5);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(73, 177, 245, 0.8);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ===== 6. 文本选中颜色 ===== */
+::selection {
+  background: rgba(0, 196, 182, 0.3);
+  color: inherit;
+}
