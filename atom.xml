@@ -10,12 +10,12 @@
   <rights>All rights reserved 2026, 断了线的风筝</rights>
   <subtitle>个人技术分享</subtitle>
   <title>断了线的风筝</title>
-  <updated>2026-11-25T16:13:56.187Z</updated>
+  <updated>2026-11-25T16:25:01.503Z</updated>
   <entry>
     <author>
       <name>断了线的风筝</name>
     </author>
-    <category term="学习笔记" scheme="http://kite-sky.github.io/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/"/>
+    <category term="WPF" scheme="http://kite-sky.github.io/categories/WPF/"/>
     <category term="WPF" scheme="http://kite-sky.github.io/tags/WPF/"/>
     <category term="Prism" scheme="http://kite-sky.github.io/tags/Prism/"/>
     <category term="MVVM" scheme="http://kite-sky.github.io/tags/MVVM/"/>
@@ -30,7 +30,7 @@
 <h1 id="1、MVVM"><a href="#1、MVVM" class="headerlink"]]>
     </summary>
     <title>Prism 学习笔记</title>
-    <updated>2026-11-25T16:13:56.187Z</updated>
+    <updated>2026-11-25T16:25:01.503Z</updated>
   </entry>
   <entry>
     <author>
