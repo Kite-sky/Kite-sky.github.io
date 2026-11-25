@@ -68,3 +68,80 @@ body {
   background: rgba(0, 196, 182, 0.3);
   color: inherit;
 }
+
+/* ===== 7. 头像圆形裁剪 ===== */
+#aside-content .card-info .avatar-img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ===== 8. 文章标题渐变文字（仅正文标题，不影响首页卡片） ===== */
+#article-container h1,
+#article-container h2,
+#article-container h3 {
+  background: linear-gradient(90deg, #49b1f5, #00c4b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
+[data-theme="dark"] #article-container h1,
+[data-theme="dark"] #article-container h2,
+[data-theme="dark"] #article-container h3 {
+  background: linear-gradient(90deg, #7ec8f7, #5fe0d8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* 标题内的锚点链接恢复正常颜色，避免被渐变吞掉 */
+#article-container h1 a,
+#article-container h2 a,
+#article-container h3 a {
+  -webkit-text-fill-color: initial;
+}
+
+/* ===== 9. 代码块圆角与 mac 风格标题栏 ===== */
+figure.highlight {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ===== 10. 背景叠加低透明度光斑纹理 ===== */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 15% 25%, rgba(73, 177, 245, 0.10) 0, transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(0, 196, 182, 0.10) 0, transparent 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+#body-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== 11. 暗色模式深度优化：毛玻璃卡片 + 协调配色 ===== */
+[data-theme="dark"] .recent-post-item,
+[data-theme="dark"] #aside-content .card-widget,
+[data-theme="dark"] #post,
+[data-theme="dark"] .content-layout {
+  background: rgba(30, 30, 47, 0.82) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+[data-theme="dark"] #article-container {
+  color: #c8c8d0;
+}
+[data-theme="dark"] figure.highlight {
+  background: #1a1a2e !important;
+}
+[data-theme="dark"] #page-header {
+  background-color: rgba(26, 33, 62, 0.6) !important;
+}
+
+/* ===== 12. Live2D 看板娘层级（确保不被卡片遮挡） ===== */
+canvas#live2dcanvas {
+  z-index: 9999 !important;
+}
