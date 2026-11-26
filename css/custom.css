@@ -145,3 +145,18 @@ body::before {
 canvas#live2dcanvas {
   z-index: 9999 !important;
 }
+
+/* ===== 13. 文章页顶部背景铺满首屏（与首页一致） ===== */
+#page-header.post-bg {
+  height: 100vh;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center center;
+}
+@media (max-width: 768px) {
+  /* 移动端关掉 fixed，避免 iOS 上背景图错位 */
+  #page-header.post-bg {
+    height: 100vh;
+    background-attachment: scroll;
+  }
+}
