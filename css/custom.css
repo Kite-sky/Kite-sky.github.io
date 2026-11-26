@@ -148,7 +148,7 @@ canvas#live2dcanvas {
 
 /* ===== 13. 文章页顶部背景铺满首屏（与首页一致） ===== */
 #page-header.post-bg {
-  height: 100vh;
+  height: 100vh !important;
   background-attachment: fixed;
   background-size: cover;
   background-position: center center;
@@ -156,7 +156,7 @@ canvas#live2dcanvas {
 @media (max-width: 768px) {
   /* 移动端关掉 fixed，避免 iOS 上背景图错位 */
   #page-header.post-bg {
-    height: 100vh;
+    height: 100vh !important;
     background-attachment: scroll;
   }
 }
